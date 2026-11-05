@@ -31,6 +31,16 @@
   12 ms per 16 ms frame. `-fno-inline` + emcc link `-O1` + `wasm2js -O1`:
   1.2 ms per frame (Node 26, 2026-11-05). Check the largest function in the
   output after any build change.
+- Warm-up (stutter at start, garbage collection) comes from V8 tiering: each
+  of the ~800 node functions runs about once per frame, and V8 needs
+  ~3000 calls (`--invocation-count-for-turbofan`) before TurboFan. Until then
+  code runs in Maglev, which boxes floats: ~3600 GCs in the first 500 frames,
+  ~0.2 per frame later. Loop unrolling (-O3) makes long straight-line node
+  functions that tier up slower; `-O2 -fno-unroll-loops` gives identical output
+  with 2.3x less warm-up compute and 5x fewer GCs. wasm2js inlining (-O2/-O3,
+  even with `-imcbs`) still builds 600+ KB functions: 5x slower.
+- Benchmark: `node tools/bench-gtcrn.mjs [file]` (cold-start bands, warm
+  percentiles, GC count). Lenovo power-saver numbers are ~2x asus.
 - emcc 6 emits bulk-memory and nontrapping-fptoint ops by default; wasm2js
   needs `--enable-bulk-memory --enable-bulk-memory-opt
   --enable-nontrapping-float-to-int` (it handles them itself).

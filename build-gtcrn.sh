@@ -58,8 +58,12 @@ cc -O1 -o "$B/out/native_check" "$B/native_harness.c" "$B/gtcrn_gru.c" \
 # optimize a huge function, and wasm2js -O2/-O3 merge all ~800 network nodes
 # into one 1.2 MB function, which runs 10x slower. Hence -fno-inline, link -O1
 # and wasm2js -O1 (measured 2026-11-05: 1.1 ms vs 12 ms per 16 ms frame).
+# -O2 -fno-unroll-loops instead of -O3: unrolled loops make long straight-line
+# node functions that V8 takes far longer to optimize. Same output bit for bit;
+# warm-up compute for the first 2.4 s of audio 813 -> 353 ms, garbage
+# collections 3063 -> 549 per 1300 frames (tools/bench-gtcrn.mjs, 2026-11-06).
 for i in 0 1 2; do
-  emcc -c -O3 -fno-inline "-Dentry=entry_p$i" "$B/out/gtcrn_part$i.c" -o "$W/part$i.o"
+  emcc -c -O2 -fno-unroll-loops -fno-inline "-Dentry=entry_p$i" "$B/out/gtcrn_part$i.c" -o "$W/part$i.o"
 done
 emcc -O1 -I"$B/pffft/include/pffft" \
   "$W/part0.o" "$W/part1.o" "$W/part2.o" \

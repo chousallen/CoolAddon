@@ -91,10 +91,21 @@ function wireDenoise(chain) {
   chain.denoiseOn = want;
 }
 
+// How much sound the browser renders at once. Chromium on Linux turns this
+// into the batch size: 'interactive' (default) 512 samples, 'playback' 1024,
+// 0.04 s 1920, 0.06 s 2944. A batch must be finished in time or Brave plays
+// silence for it, and on a slow CPU (i7-13700H, power-saver) GTCRN overran the
+// 512-sample batches throughout. The browser keeps about three batches queued,
+// so delay grows fast: measured base + output latency 43 ms (interactive),
+// 85 ms (playback), 160 ms (0.04), 229 ms (0.06) (Chrome, 2026-11-06). On the
+// slow laptop 'playback' removed as many gaps as 0.04 (power-saver 9 vs 12 per
+// minute, balanced 0 vs 25), at a third of the extra delay.
+const LATENCY_HINT = 'playback';
+
 function getContext() {
   if (!ctx) {
     // 48 kHz: GTCRN (noise removal) runs in its 48 kHz mode.
-    ctx = new AudioContext({ sampleRate: 48000 });
+    ctx = new AudioContext({ sampleRate: 48000, latencyHint: LATENCY_HINT });
     ctx.addEventListener('statechange', applyAudio);
   }
   if (ctx.state === 'suspended') ctx.resume();

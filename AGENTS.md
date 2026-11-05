@@ -62,6 +62,14 @@
 - `chrome.storage.sync` allows ~120 writes/min; the volume slider exceeds it, so
   settings use `chrome.storage.local`.
 - Extension `commands`: at most 4 `suggested_key`s (all 4 used).
+- Render batch = `baseLatency` (Chromium, Linux, PipeWire): latencyHint
+  'interactive' 512 samples, 'playback' 1024, 0.04 1920, 0.06 2944. A batch
+  not finished in time becomes exact zeros of that length in Brave's output
+  (PipeWire shows no xruns). Total delay (base + output latency) grows ~3x the
+  batch: 43 / 85 / 160 / 229 ms. content.js uses 'playback'.
+- Slow-laptop reference (i7-13700H, USB DAC, stereo GTCRN, gaps per ~55 s):
+  512 batches 174 balanced / 901 power-saver; 'playback' 0 / 9; 0.04 25 / 12.
+  Long gaps (80-200 ms) in power-saver are stalls no batch size covers.
 
 ## Testing with the Claude-in-Chrome tool
 - It drives Google Chrome, not Brave; load the unpacked add-on in Chrome too.

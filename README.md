@@ -4,7 +4,8 @@ A Brave / Chrome add-on for lecture videos on NTU COOL (https://cool.ntu.edu.tw)
 
 - **Volume up to 1000 %** — a limiter keeps loud parts from crackling.
 - **Remove background noise** — GTCRN (a small neural network for speech) quiets fan and room noise,
-  also while someone talks. It delays the sound by about 35 ms and removes sound above 8 kHz.
+  also while someone talks. It delays the sound by about 80 ms (35 ms in GTCRN, the rest from larger
+  audio batches that keep slower laptops from stuttering) and removes sound above 8 kHz.
 - **Invert video colors** — white slides become dark. Only the video picture changes.
 
 ## Install

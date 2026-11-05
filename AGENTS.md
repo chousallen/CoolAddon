@@ -16,12 +16,32 @@
   script's isolated world, and AudioWorklets created from either.
 - `audioWorklet.addModule(chrome.runtime.getURL(...))` from the content script and
   its static imports DO load (files listed in `web_accessible_resources`).
-- Hence RNNoise runs as plain JS: `npm install && npm run vendor` regenerates
-  `vendor/rnnoise.js` via binaryen `wasm2js` (non-SIMD build; wasm2js cannot do SIMD).
-- Speed in Chrome after warm-up: 0.46 ms per 10 ms frame per channel. The first
-  few frames are ~10x slower (JIT warm-up); time with ≥100 warm-up frames.
-- The package's own `rnnoise.wasm` measured ~600 ms per frame in both Node 26 and
-  Chrome 155. Unexplained; unused, so not investigated.
+- Hence noise removal runs as plain JS. `./build-gtcrn.sh` (with emsdk active)
+  regenerates `vendor/gtcrn.js`: GTCRN compiled to WebAssembly without SIMD,
+  then binaryen `wasm2js`. wasm2js cannot convert SIMD; binaryen has no
+  SIMD-to-scalar pass, so SIMD must be off at compile time.
+
+## GTCRN build (vendor/gtcrn.js)
+- Source: `sapphi-red/gtcrn-wasm` at the commit pinned in `build-gtcrn.sh`, built
+  with emcc 6.0.13. Its upstream steps (`rewrite_gru.py`, onnx2c, native check)
+  are reused; only the emcc and wasm2js steps differ.
+- Speed depends on function size: V8 does not optimize huge functions, and the
+  unoptimized code boxes every float (GC took 44 % of the time). wasm2js -O2/-O3
+  (and C-level inlining) merge all ~800 network nodes into one 1.2 MB function:
+  12 ms per 16 ms frame. `-fno-inline` + emcc link `-O1` + `wasm2js -O1`:
+  1.2 ms per frame (Node 26, 2026-11-05). Check the largest function in the
+  output after any build change.
+- emcc 6 emits bulk-memory and nontrapping-fptoint ops by default; wasm2js
+  needs `--enable-bulk-memory --enable-bulk-memory-opt
+  --enable-nontrapping-float-to-int` (it handles them itself).
+- emsdk's `wasm2js` is in `~/emsdk/upstream/bin`, which `emsdk_env.sh` does not
+  put on PATH; the script finds it next to emcc.
+- onnx2c needs the protobuf C++ library. On this laptop it comes from the conda
+  env `~/miniconda3/envs/gtcrn-build` (`PROTOBUF_PREFIX`). Conda's default
+  package folder is on an external SSD; when it is not mounted, set
+  `CONDA_PKGS_DIRS=$HOME/.conda/pkgs`.
+- Output matches the WebAssembly build exactly. 48 kHz mode: 768-sample frames,
+  18.5 ms internal delay (cross-correlation), output band-limited to 8 kHz.
 
 ## Web Audio details
 - AudioContext only runs after a click or key press in that frame. Never connect a
@@ -43,14 +63,7 @@
   main world; test the worklet by loading
   `chrome-extension://<id>/denoise-worklet.js` into an OfflineAudioContext there.
 
-## Noise removal during speech (open)
-- RNNoise clears pauses well but leaves noise in voice bands while someone talks
-  (it only scales ~20 frequency bands). User-reported 2026-11-05.
-- Candidate: GTCRN (MIT; https://github.com/sapphi-red/gtcrn-wasm). Published
-  background-noise score DNSMOS BAK 3.90 vs RNNoise 3.45; similar CPU cost. Its
-  48 kHz mode resamples to 16 kHz, so output stops at 8 kHz.
-- The shipped `gtcrn.wasm` uses SIMD, which wasm2js cannot convert, and binaryen
-  132 has no SIMD-to-scalar pass (only `--llvm-memory-copy-fill-lowering` and
-  `--llvm-nontrapping-fptoint-lowering` for its other two features). Route: rebuild
-  gtcrn-wasm from source without `-msimd128` (needs emsdk, cmake, protoc, uv, pnpm,
-  onnx2c; see its internal-docs/building.md), then wasm2js. Untested.
+## Noise removal during speech
+- RNNoise (used up to version 0.3.0) cleared pauses but left noise in voice bands
+  while someone talked; it only scales ~20 frequency bands. Replaced by GTCRN
+  (DNSMOS BAK 3.90 vs RNNoise 3.45 in its paper).

@@ -3,7 +3,8 @@
 A Brave / Chrome add-on for lecture videos on NTU COOL (https://cool.ntu.edu.tw).
 
 - **Volume up to 1000 %** — a limiter keeps loud parts from crackling.
-- **Remove background noise** — RNNoise (a small neural network for speech) quiets fan and room noise.
+- **Remove background noise** — GTCRN (a small neural network for speech) quiets fan and room noise,
+  also while someone talks. It delays the sound by about 35 ms and removes sound above 8 kHz.
 - **Invert video colors** — white slides become dark. Only the video picture changes.
 
 ## Install
@@ -30,22 +31,25 @@ Settings are remembered and apply to every NTU COOL tab at once.
 Volume above 100 % and noise removal start after you click or press a key once
 inside the video player. The browser does not let sound processing start before that.
 
-## Rebuilding vendor/rnnoise.js
+## Rebuilding vendor/gtcrn.js
 
-`vendor/rnnoise.js` is generated and committed, so the add-on loads without a
-build step. To regenerate it (for example after updating the package):
+`vendor/gtcrn.js` is generated and committed, so the add-on loads without a
+build step. It is GTCRN compiled to WebAssembly without SIMD and converted to
+plain JavaScript with binaryen's `wasm2js`, because the NTU COOL player page
+does not allow WebAssembly. To regenerate it:
 
 ```sh
-npm install
-npm run vendor
+source ~/emsdk/emsdk_env.sh   # Emscripten (emcc)
+./build-gtcrn.sh              # also needs git, uv, cmake, a C compiler, protobuf
 ```
 
-It is RNNoise converted from WebAssembly to plain JavaScript with binaryen's
-`wasm2js`, because the NTU COOL player page does not allow WebAssembly.
+The script fetches the pinned `sapphi-red/gtcrn-wasm` source into `build-cache/`.
+If protobuf is not installed system-wide, set `PROTOBUF_PREFIX` to where it is
+(for example a conda env) and put its `bin/` on `PATH`.
 
 ## Licenses
 
-RNNoise: BSD-3-Clause (Xiph.Org). WebAssembly build: `@shiguredo/rnnoise-wasm`,
-Apache-2.0. Packaged by `@sapphi-red/web-noise-suppressor`, MIT
-(`vendor/LICENSE-web-noise-suppressor`). The buffering in `denoise-worklet.js`
-is ported from that package.
+GTCRN model: MIT (Rong Xiaobin, `vendor/LICENSE-gtcrn`). WebAssembly port and
+streaming front end: `sapphi-red/gtcrn-wasm`, MIT (`vendor/LICENSE-gtcrn-wasm`).
+FFT: pffft, BSD-style (`vendor/LICENSE-pffft`). Converted to C with onnx2c and
+compiled with Emscripten.

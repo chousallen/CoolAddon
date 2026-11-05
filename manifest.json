@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NTU COOL Video",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Dark video picture, louder sound (up to 1000 %) and background noise removal for NTU COOL lecture videos.",
   "permissions": [
     "storage"
@@ -41,7 +41,7 @@
     {
       "resources": [
         "denoise-worklet.js",
-        "vendor/rnnoise.js"
+        "vendor/gtcrn.js"
       ],
       "matches": [
         "https://cool.ntu.edu.tw/*",

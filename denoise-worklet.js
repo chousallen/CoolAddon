@@ -1,58 +1,46 @@
-// AudioWorklet processor: RNNoise noise removal, one RNNoise state per channel.
+// AudioWorklet processor: GTCRN noise removal, one GTCRN state per channel.
 //
-// RNNoise is loaded as plain JavaScript (vendor/rnnoise.js, made by build-vendor.mjs),
-// because the player page forbids compiling WebAssembly. Measured in Chrome
-// (2026-11-05): 0.46 ms per 10 ms frame per channel.
+// GTCRN is loaded as plain JavaScript (vendor/gtcrn.js, made by build-gtcrn.sh),
+// because the player page forbids compiling WebAssembly. Measured in Node
+// (2026-11-05): 1.2 ms per 16 ms frame per channel.
 //
-// The buffering below is ported from @sapphi-red/web-noise-suppressor 0.4.1
-// (src/rnnoise/processor.ts, MIT): the browser hands over 128-sample blocks,
-// RNNoise works on 480-sample frames, so samples go through a 1920-sample ring
-// and come out 640 samples (13 ms at 48 kHz) later.
-import * as rn from './vendor/rnnoise.js';
+// The browser hands over 128-sample blocks; GTCRN's 48 kHz mode works on
+// 768-sample frames (6 blocks). Input blocks are written straight into GTCRN's
+// input buffer; once it is full, the frame is denoised and played back over the
+// next 6 blocks. That adds 768 samples (16 ms) to GTCRN's own 18.5 ms delay.
+import * as gt from './vendor/gtcrn.js';
 
-rn.emscripten_stack_init();
-rn.__wasm_call_ctors();
+gt._initialize();
 
-const FRAME = 480; // RNNoise frame: 10 ms at 48 kHz
+const FRAME = 768; // GTCRN frame at 48 kHz: 16 ms
 const BLOCK = 128; // AudioWorklet block size
-const RING = 1920;
-const DELAY = (Math.floor(FRAME / BLOCK) + 1) * BLOCK + BLOCK; // 640
-const SCALE = 0x7fff; // RNNoise expects 16-bit sample values
-// RNNoise's memory never grows (build-vendor.mjs refuses growth), so one view is enough.
-const heap = new Float32Array(rn.memory.buffer);
+// GTCRN's memory never grows (build-gtcrn.sh turns growth off), so one view is enough.
+const heap = new Float32Array(gt.memory.buffer);
 
 function createChannel() {
-  const state = rn.rnnoise_create(0); // 0 = built-in model
-  const inPtr = rn.malloc(FRAME * 4);
-  const outPtr = rn.malloc(FRAME * 4);
-  if (!state || !inPtr || !outPtr) throw new Error('RNNoise: out of memory');
+  const state = gt.gtcrn_create();
+  const inPtr = gt.malloc(FRAME * 4);
+  const outPtr = gt.malloc(FRAME * 4);
+  if (!state || !inPtr || !outPtr) throw new Error('GTCRN: out of memory');
   const inAt = inPtr >> 2;
   const outAt = outPtr >> 2;
 
-  const ring = new Float32Array(RING);
-  let input = 0;
-  let pos = RING - FRAME * 2;
-
-  function denoiseFrame(frame) {
-    for (let i = 0; i < FRAME; i++) heap[inAt + i] = frame[i] * SCALE;
-    rn.rnnoise_process_frame(state, outPtr, inPtr);
-    for (let i = 0; i < FRAME; i++) frame[i] = heap[outAt + i] / SCALE;
-  }
+  const playing = new Float32Array(FRAME); // last denoised frame
+  let fill = 0; // samples of the current frame received so far
 
   return (inBlock, outBlock) => {
-    ring.set(inBlock, input);
-    input = (input + BLOCK) % RING;
-    // 128, 512, 1024, 1536: the first multiple of 128 after each multiple of 480.
-    if (input === 128 || input === 512 || input === 1024 || input === 1536) {
-      pos = (pos + FRAME) % RING;
-      denoiseFrame(ring.subarray(pos, pos + FRAME));
+    heap.set(inBlock, inAt + fill);
+    outBlock.set(playing.subarray(fill, fill + BLOCK));
+    fill += BLOCK;
+    if (fill === FRAME) {
+      gt.gtcrn_process_48k(state, inPtr, outPtr);
+      playing.set(heap.subarray(outAt, outAt + FRAME));
+      fill = 0;
     }
-    const start = (input + (RING - DELAY)) % RING;
-    outBlock.set(ring.subarray(start, start + BLOCK));
   };
 }
 
-class RnnoiseProcessor extends AudioWorkletProcessor {
+class GtcrnProcessor extends AudioWorkletProcessor {
   channels = [];
 
   process(inputs, outputs) {
@@ -65,4 +53,4 @@ class RnnoiseProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor('ntu-cool-video-rnnoise', RnnoiseProcessor);
+registerProcessor('ntu-cool-video-gtcrn', GtcrnProcessor);

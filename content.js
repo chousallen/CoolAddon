@@ -23,14 +23,14 @@ function applyInvert() {
 }
 
 // ---------- Sound chain ----------
-// video -> [RNNoise] -> volume -> limiter -> makeup trim -> speakers
+// video -> [GTCRN] -> volume -> limiter -> makeup trim -> speakers
 //
 // The player's media is a blob: (MediaSource) URL on the player's own origin, so
 // createMediaElementSource gets real samples, not CORS silence (checked 2026-11-05).
 // A video is only routed through the chain once the volume is first raised above
 // 100 % or noise removal is first turned on, so the add-on does not touch the
 // sound until it is needed. Routing a video cannot be undone; afterwards 100 %
-// simply means gain 1 and "noise removal off" means RNNoise is bypassed.
+// simply means gain 1 and "noise removal off" means GTCRN is bypassed.
 
 const LOG = '[NTU COOL Video]';
 
@@ -67,19 +67,19 @@ function denoiseFailed(reason) {
   denoiseState = 'failed';
   denoiseError = reason;
   console.warn(`${LOG} noise removal ${reason}`);
-  applyAudio(); // reconnect every video without RNNoise, so the sound never stops
+  applyAudio(); // reconnect every video without GTCRN, so the sound never stops
 }
 
-// Route the video through RNNoise or around it, as settings and load state allow.
+// Route the video through GTCRN or around it, as settings and load state allow.
 function wireDenoise(chain) {
   const want = settings.denoise && denoiseState === 'ready';
   if (want === chain.denoiseOn) return;
   chain.source.disconnect();
   if (want) {
     if (!chain.denoiser) {
-      chain.denoiser = new AudioWorkletNode(ctx, 'ntu-cool-video-rnnoise', {
+      chain.denoiser = new AudioWorkletNode(ctx, 'ntu-cool-video-gtcrn', {
         channelCount: 2,
-        channelCountMode: 'clamped-max', // at most 2 RNNoise states per video
+        channelCountMode: 'clamped-max', // at most 2 GTCRN states per video
       });
       chain.denoiser.addEventListener('processorerror', () => denoiseFailed('stopped with an error'));
       chain.denoiser.connect(chain.gain);
@@ -93,7 +93,7 @@ function wireDenoise(chain) {
 
 function getContext() {
   if (!ctx) {
-    // 48 kHz: the rate RNNoise (noise removal) needs.
+    // 48 kHz: GTCRN (noise removal) runs in its 48 kHz mode.
     ctx = new AudioContext({ sampleRate: 48000 });
     ctx.addEventListener('statechange', applyAudio);
   }

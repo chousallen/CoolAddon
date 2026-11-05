@@ -36,16 +36,36 @@ inside the video player. The browser does not let sound processing start before 
 `vendor/gtcrn.js` is generated and committed, so the add-on loads without a
 build step. It is GTCRN compiled to WebAssembly without SIMD and converted to
 plain JavaScript with binaryen's `wasm2js`, because the NTU COOL player page
-does not allow WebAssembly. To regenerate it:
+does not allow WebAssembly.
+
+Tools, with the versions the committed file was built with:
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Emscripten (emcc) | 6.0.13 | see below |
+| protobuf (protoc + C++ library) | 7.36.2 (protoc 36.2) | `conda env create -f environment.yml` |
+| uv | 0.9.8 | https://docs.astral.sh/uv/ |
+| cmake | 3.28.3 | Ubuntu 24.04 package |
+| C compiler | gcc 13.3.0 | Ubuntu 24.04 package |
+
+Install Emscripten once (about 1 GB, in your home folder):
 
 ```sh
-source ~/emsdk/emsdk_env.sh   # Emscripten (emcc)
-./build-gtcrn.sh              # also needs git, uv, cmake, a C compiler, protobuf
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+~/emsdk/emsdk install 6.0.13
+~/emsdk/emsdk activate 6.0.13
+```
+
+Then regenerate:
+
+```sh
+source ~/emsdk/emsdk_env.sh
+export PROTOBUF_PREFIX=$(conda info --base)/envs/gtcrn-build
+PATH=$PROTOBUF_PREFIX/bin:$PATH ./build-gtcrn.sh
 ```
 
 The script fetches the pinned `sapphi-red/gtcrn-wasm` source into `build-cache/`.
-If protobuf is not installed system-wide, set `PROTOBUF_PREFIX` to where it is
-(for example a conda env) and put its `bin/` on `PATH`.
+Its Python packages are pinned by that source's `uv.lock`.
 
 ## Licenses
 

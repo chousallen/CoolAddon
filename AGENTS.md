@@ -36,8 +36,9 @@
   --enable-nontrapping-float-to-int` (it handles them itself).
 - emsdk's `wasm2js` is in `~/emsdk/upstream/bin`, which `emsdk_env.sh` does not
   put on PATH; the script finds it next to emcc.
-- onnx2c needs the protobuf C++ library. On this laptop it comes from the conda
-  env `~/miniconda3/envs/gtcrn-build` (`PROTOBUF_PREFIX`). Conda's default
+- onnx2c needs the protobuf C++ library: `environment.yml` (conda package
+  `libprotobuf`, which also ships `protoc`). On this laptop the env is
+  `~/miniconda3/envs/gtcrn-build` (`PROTOBUF_PREFIX`). Conda's default
   package folder is on an external SSD; when it is not mounted, set
   `CONDA_PKGS_DIRS=$HOME/.conda/pkgs`.
 - Output matches the WebAssembly build exactly. 48 kHz mode: 768-sample frames,

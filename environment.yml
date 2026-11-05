@@ -1,0 +1,10 @@
+# Conda environment for build-gtcrn.sh: protobuf (protoc + C++ library) for onnx2c.
+# Create:  conda env create -f environment.yml
+# Use:     PROTOBUF_PREFIX=$(conda info --base)/envs/gtcrn-build \
+#          PATH=$PROTOBUF_PREFIX/bin:$PATH ./build-gtcrn.sh
+# Version: the one vendor/gtcrn.js was built with (2026-11-05).
+name: gtcrn-build
+channels:
+  - conda-forge
+dependencies:
+  - libprotobuf=7.36.2

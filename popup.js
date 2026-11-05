@@ -1,12 +1,12 @@
-// When popup.html is opened as a local file (for testing), the chrome.* APIs
+// When popup.html is opened outside the add-on (for testing), the chrome.* APIs
 // do not exist. Then settings live in memory and one video is pretended found.
 const inExtension = typeof chrome !== 'undefined' && !!chrome.storage;
 
 const memory = { ...DEFAULTS };
 const store = inExtension
   ? {
-      get: () => chrome.storage.sync.get(DEFAULTS),
-      set: (values) => chrome.storage.sync.set(values),
+      get: () => chrome.storage.local.get(DEFAULTS),
+      set: (values) => chrome.storage.local.set(values),
     }
   : {
       get: async () => ({ ...memory }),
@@ -14,16 +14,27 @@ const store = inExtension
     };
 
 const statusEl = document.getElementById('status');
-const controlsEl = document.getElementById('controls');
 const activeEl = document.getElementById('active');
+const controlsEl = document.getElementById('controls');
+const volumeEl = document.getElementById('volume');
+const volumeValueEl = document.getElementById('volume-value');
 const invertEl = document.getElementById('invert');
 const resetEl = document.getElementById('reset');
 
 function show(settings) {
+  volumeEl.value = settings.volume;
+  volumeValueEl.textContent = `${settings.volume} %`;
   invertEl.checked = settings.invert;
+
   const on = [];
+  if (settings.volume !== DEFAULTS.volume) on.push(`Volume ${settings.volume} %`);
   if (settings.invert) on.push('Invert video colors');
   activeEl.textContent = `On now: ${on.length ? on.join(', ') : 'nothing'}`;
+}
+
+async function save(values) {
+  await store.set(values);
+  show(await store.get());
 }
 
 async function countVideos() {
@@ -51,27 +62,23 @@ async function showStatus() {
   }
 }
 
+// Show the keys actually set at brave://extensions/shortcuts.
 async function showKeys() {
   if (!inExtension) return;
-  const commands = await chrome.commands.getAll();
-  const invert = commands.find((c) => c.name === 'toggle-invert');
-  document.getElementById('key-invert').textContent = invert?.shortcut || 'no key set';
+  for (const command of await chrome.commands.getAll()) {
+    const el = document.getElementById(`key-${command.name}`);
+    if (el) el.textContent = command.shortcut || 'no key set';
+  }
 }
 
-invertEl.addEventListener('change', async () => {
-  await store.set({ invert: invertEl.checked });
-  show(await store.get());
-});
-
-resetEl.addEventListener('click', async () => {
-  await store.set({ ...DEFAULTS });
-  show(DEFAULTS);
-});
+volumeEl.addEventListener('input', () => save({ volume: clampVolume(Number(volumeEl.value)) }));
+invertEl.addEventListener('change', () => save({ invert: invertEl.checked }));
+resetEl.addEventListener('click', () => save({ ...DEFAULTS }));
 
 // Keep the popup in step with keyboard shortcuts pressed while it is open.
 if (inExtension) {
   chrome.storage.onChanged.addListener(async (_changes, area) => {
-    if (area === 'sync') show(await store.get());
+    if (area === 'local') show(await store.get());
   });
 }
 

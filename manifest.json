@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NTU COOL Video",
-  "version": "0.1.0",
-  "description": "Dark video picture for NTU COOL lecture videos.",
+  "version": "0.2.0",
+  "description": "Dark video picture and louder sound (up to 1000 %) for NTU COOL lecture videos.",
   "permissions": ["storage"],
   "background": {
     "service_worker": "background.js"
@@ -36,6 +36,14 @@
     "toggle-invert": {
       "suggested_key": { "default": "Alt+Shift+I" },
       "description": "Invert video colors on/off"
+    },
+    "volume-up": {
+      "suggested_key": { "default": "Alt+Shift+Up" },
+      "description": "Volume up 50 %"
+    },
+    "volume-down": {
+      "suggested_key": { "default": "Alt+Shift+Down" },
+      "description": "Volume down 50 %"
     }
   }
 }

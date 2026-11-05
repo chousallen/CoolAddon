@@ -53,6 +53,30 @@ fieldset:disabled {
   opacity: 0.5;
 }
 
+.volume-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+.volume-head output {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.volume-row input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.hint.flush {
+  margin: 0 0 10px;
+}
+
 .switch {
   display: flex;
   align-items: center;

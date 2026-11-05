@@ -1,8 +1,16 @@
 importScripts('settings.js');
 
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'toggle-invert') {
-    const { invert } = await chrome.storage.sync.get({ invert: DEFAULTS.invert });
-    await chrome.storage.sync.set({ invert: !invert });
+  const current = await chrome.storage.local.get(DEFAULTS);
+  switch (command) {
+    case 'toggle-invert':
+      await chrome.storage.local.set({ invert: !current.invert });
+      break;
+    case 'volume-up':
+      await chrome.storage.local.set({ volume: clampVolume(current.volume + VOLUME_KEY_STEP) });
+      break;
+    case 'volume-down':
+      await chrome.storage.local.set({ volume: clampVolume(current.volume - VOLUME_KEY_STEP) });
+      break;
   }
 });

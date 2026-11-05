@@ -12,6 +12,17 @@
   <p id="active" class="note">On now: nothing</p>
 
   <fieldset id="controls">
+    <div class="volume-head">
+      <label for="volume">Volume</label>
+      <output id="volume-value" for="volume">100 %</output>
+    </div>
+    <div class="volume-row">
+      <span>100 %</span>
+      <input type="range" id="volume" min="100" max="1000" step="10" value="100">
+      <span>1000 %</span>
+    </div>
+    <p class="hint flush">Loud parts are kept from crackling.</p>
+
     <label class="switch">
       <input type="checkbox" id="invert">
       <span>Invert video colors</span>
@@ -21,13 +32,18 @@
 
   <p class="note">Changes apply at once and are remembered.</p>
 
-  <p class="keys">Keyboard: <kbd id="key-invert">Alt+Shift+I</kbd> turns invert on/off</p>
+  <p class="keys">
+    Keyboard:<br>
+    <kbd id="key-volume-up">Alt+Shift+Up</kbd> / <kbd id="key-volume-down">Alt+Shift+Down</kbd> volume up/down 50 %<br>
+    <kbd id="key-toggle-invert">Alt+Shift+I</kbd> turns invert on/off
+  </p>
 
   <button id="reset" type="button">Turn all effects off</button>
 
   <details>
     <summary>How this works</summary>
     <p>Settings apply to every NTU COOL tab.</p>
+    <p>Volume above 100 % starts after you click or press a key once in the video player.</p>
     <p>Invert flips the colors of the video picture only. The rest of the page stays the same.</p>
     <p>To change the keys, open brave://extensions/shortcuts.</p>
   </details>

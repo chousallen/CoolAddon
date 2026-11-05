@@ -1,0 +1,14 @@
+{
+  "name": "ntu-cool-video",
+  "private": true,
+  "description": "Build helper: converts RNNoise to plain JavaScript in vendor/.",
+  "scripts": {
+    "vendor": "node build-vendor.mjs"
+  },
+  "dependencies": {
+    "@sapphi-red/web-noise-suppressor": "0.4.1"
+  },
+  "devDependencies": {
+    "binaryen": "132.0.0"
+  }
+}

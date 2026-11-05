@@ -1,9 +1,11 @@
 {
   "manifest_version": 3,
   "name": "NTU COOL Video",
-  "version": "0.2.0",
-  "description": "Dark video picture and louder sound (up to 1000 %) for NTU COOL lecture videos.",
-  "permissions": ["storage"],
+  "version": "0.3.0",
+  "description": "Dark video picture, louder sound (up to 1000 %) and background noise removal for NTU COOL lecture videos.",
+  "permissions": [
+    "storage"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -27,23 +29,50 @@
         "https://cool.ntu.edu.tw/*",
         "https://cool-video.dlc.ntu.edu.tw/*"
       ],
-      "js": ["settings.js", "content.js"],
+      "js": [
+        "settings.js",
+        "content.js"
+      ],
       "all_frames": true,
       "run_at": "document_start"
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "denoise-worklet.js",
+        "vendor/rnnoise.js"
+      ],
+      "matches": [
+        "https://cool.ntu.edu.tw/*",
+        "https://cool-video.dlc.ntu.edu.tw/*"
+      ]
+    }
+  ],
   "commands": {
     "toggle-invert": {
-      "suggested_key": { "default": "Alt+Shift+I" },
+      "suggested_key": {
+        "default": "Alt+Shift+I"
+      },
       "description": "Invert video colors on/off"
     },
     "volume-up": {
-      "suggested_key": { "default": "Alt+Shift+Up" },
+      "suggested_key": {
+        "default": "Alt+Shift+Up"
+      },
       "description": "Volume up 50 %"
     },
     "volume-down": {
-      "suggested_key": { "default": "Alt+Shift+Down" },
+      "suggested_key": {
+        "default": "Alt+Shift+Down"
+      },
       "description": "Volume down 50 %"
+    },
+    "toggle-denoise": {
+      "suggested_key": {
+        "default": "Alt+Shift+N"
+      },
+      "description": "Remove background noise on/off"
     }
   }
 }

@@ -96,6 +96,13 @@ fieldset:disabled {
   font-size: 13px;
 }
 
+.hint.error {
+  color: var(--warn);
+}
+.switch.spaced {
+  margin-top: 10px;
+}
+
 .note,
 .keys {
   margin: 0 0 12px;

@@ -4,6 +4,7 @@
 const DEFAULTS = Object.freeze({
   invert: false,
   volume: 100, // percent
+  denoise: false,
 });
 
 const VOLUME_MIN = 100;

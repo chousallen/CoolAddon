@@ -22,13 +22,15 @@ function applyInvert() {
   }
 }
 
-// ---------- Sound chain: video -> volume -> limiter -> makeup trim -> speakers ----------
+// ---------- Sound chain ----------
+// video -> [RNNoise] -> volume -> limiter -> makeup trim -> speakers
 //
 // The player's media is a blob: (MediaSource) URL on the player's own origin, so
 // createMediaElementSource gets real samples, not CORS silence (checked 2026-11-05).
 // A video is only routed through the chain once the volume is first raised above
-// 100 %, so the add-on does not touch the sound until it is needed. Routing a
-// video cannot be undone; afterwards 100 % simply means gain 1.
+// 100 % or noise removal is first turned on, so the add-on does not touch the
+// sound until it is needed. Routing a video cannot be undone; afterwards 100 %
+// simply means gain 1 and "noise removal off" means RNNoise is bypassed.
 
 const LOG = '[NTU COOL Video]';
 
@@ -43,10 +45,50 @@ const MAKEUP_TRIM = 10 ** ((0.6 * LIMIT_THRESHOLD_DB * (1 - 1 / LIMIT_RATIO)) / 
 
 let ctx = null;
 let waitingLogged = false;
-const chains = new WeakMap(); // video -> { gain }
+const chains = new WeakMap(); // video -> { source, gain, denoiser, denoiseOn }
+
+// Noise removal: 'off' until first wanted, then 'loading' -> 'ready' or 'failed'.
+let denoiseState = 'off';
+let denoiseError = '';
 
 function needsChain() {
-  return settings.volume > 100;
+  return settings.volume > 100 || settings.denoise;
+}
+
+function loadDenoiser() {
+  denoiseState = 'loading';
+  ctx.audioWorklet.addModule(chrome.runtime.getURL('denoise-worklet.js')).then(
+    () => { denoiseState = 'ready'; applyAudio(); },
+    (e) => { denoiseFailed(`could not load (${e})`); },
+  );
+}
+
+function denoiseFailed(reason) {
+  denoiseState = 'failed';
+  denoiseError = reason;
+  console.warn(`${LOG} noise removal ${reason}`);
+  applyAudio(); // reconnect every video without RNNoise, so the sound never stops
+}
+
+// Route the video through RNNoise or around it, as settings and load state allow.
+function wireDenoise(chain) {
+  const want = settings.denoise && denoiseState === 'ready';
+  if (want === chain.denoiseOn) return;
+  chain.source.disconnect();
+  if (want) {
+    if (!chain.denoiser) {
+      chain.denoiser = new AudioWorkletNode(ctx, 'ntu-cool-video-rnnoise', {
+        channelCount: 2,
+        channelCountMode: 'clamped-max', // at most 2 RNNoise states per video
+      });
+      chain.denoiser.addEventListener('processorerror', () => denoiseFailed('stopped with an error'));
+      chain.denoiser.connect(chain.gain);
+    }
+    chain.source.connect(chain.denoiser);
+  } else {
+    chain.source.connect(chain.gain);
+  }
+  chain.denoiseOn = want;
 }
 
 function getContext() {
@@ -71,7 +113,7 @@ function buildChain(video) {
   const trim = ctx.createGain();
   trim.gain.value = MAKEUP_TRIM;
   source.connect(gain).connect(limiter).connect(trim).connect(ctx.destination);
-  const chain = { gain };
+  const chain = { source, gain, denoiser: null, denoiseOn: false };
   chains.set(video, chain);
   console.info(`${LOG} sound processing on for a video (${ctx.sampleRate} Hz)`);
   return chain;
@@ -86,13 +128,15 @@ function applyAudio() {
       // The browser only lets the context run after the user has clicked or pressed
       // a key in this frame; the listeners below retry then.
       if (getContext().state !== 'running') {
-        if (!waitingLogged) console.info(`${LOG} volume boost waits for a click or key press in the player`);
+        if (!waitingLogged) console.info(`${LOG} sound processing waits for a click or key press in the player`);
         waitingLogged = true;
         continue;
       }
       chain = buildChain(video);
     }
     chain.gain.gain.setTargetAtTime(settings.volume / 100, ctx.currentTime, 0.02);
+    if (settings.denoise && denoiseState === 'off') loadDenoiser();
+    wireDenoise(chain);
   }
 }
 
@@ -129,5 +173,5 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== 'count-videos') return;
   const count = document.querySelectorAll('video').length;
-  if (count > 0) sendResponse({ count });
+  if (count > 0) sendResponse({ count, denoiseState, denoiseError });
 });

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NTU COOL Video</title>
+  <link rel="icon" href="icons/icon16.png">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>NTU COOL Video</h1>
+  <p id="status" class="status">Checking this page…</p>
+  <p id="active" class="note">On now: nothing</p>
+
+  <fieldset id="controls">
+    <label class="switch">
+      <input type="checkbox" id="invert">
+      <span>Invert video colors</span>
+    </label>
+    <p class="hint">White slides become dark.</p>
+  </fieldset>
+
+  <p class="note">Changes apply at once and are remembered.</p>
+
+  <p class="keys">Keyboard: <kbd id="key-invert">Alt+Shift+I</kbd> turns invert on/off</p>
+
+  <button id="reset" type="button">Turn all effects off</button>
+
+  <details>
+    <summary>How this works</summary>
+    <p>Settings apply to every NTU COOL tab.</p>
+    <p>Invert flips the colors of the video picture only. The rest of the page stays the same.</p>
+    <p>To change the keys, open brave://extensions/shortcuts.</p>
+  </details>
+
+  <script src="settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
